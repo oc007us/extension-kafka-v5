@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: KafkaAxonExample
+
+axon:
+  axonserver:
+    enabled: false
+  serializer:
+    events: jackson
+  kafka:
+    default-topic: axon-events
+    bootstrap-servers: localhost:9092
+    clientid: kafka-axon-example
+    publisher:
+      enabled: true
+    fetcher:
+      enabled: true
+    producer:
+      retries: 0
+    consumer:
+      event-processor-mode: TRACKING
+
+    properties:
+      security.protocol: PLAINTEXT
