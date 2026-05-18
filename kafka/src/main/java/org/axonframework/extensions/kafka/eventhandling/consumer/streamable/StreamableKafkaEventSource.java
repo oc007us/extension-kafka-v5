@@ -32,13 +32,17 @@ import org.axonframework.messaging.core.MessageStream;
 import org.axonframework.messaging.core.unitofwork.ProcessingContext;
 import org.axonframework.messaging.eventhandling.EventMessage;
 import org.axonframework.messaging.eventhandling.processing.streaming.token.TrackingToken;
+import org.axonframework.messaging.eventstreaming.EventCriteria;
 import org.axonframework.messaging.eventstreaming.StreamableEventSource;
 import org.axonframework.messaging.eventstreaming.StreamingCondition;
+import org.axonframework.messaging.eventstreaming.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.invoke.MethodHandles;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -102,8 +106,8 @@ public class StreamableKafkaEventSource<K, V> implements StreamableEventSource {
      * {@inheritDoc}
      * <p>
      * Opens a stream filled by polling {@link ConsumerRecords} from the specified topics with the {@link Fetcher}.
-     * The position is extracted from the given {@link StreamingCondition}; any criteria/tags are ignored since Kafka
-     * does not support AF5 tag filtering natively.
+     * The position is extracted from the given {@link StreamingCondition}. If the condition contains
+     * {@link EventCriteria}, client-side filtering is applied since Kafka does not support tag/type filtering natively.
      */
     @Override
     public MessageStream<EventMessage> open(@Nonnull StreamingCondition condition,
@@ -117,8 +121,6 @@ public class StreamableKafkaEventSource<K, V> implements StreamableEventSource {
         ConsumerSeekUtil.seekToCurrentPositions(consumer, recordConverter::currentToken, subscriber);
 
         Buffer<KafkaEventMessage> buffer = bufferFactory.get();
-        // We need a reference to the stream for error reporting, but also need the fetcher registration
-        // for close handling. Use a holder to break the circular dependency.
         KafkaMessageStream[] streamHolder = new KafkaMessageStream[1];
 
         Registration fetcherRegistration = fetcher.poll(
@@ -136,6 +138,16 @@ public class StreamableKafkaEventSource<K, V> implements StreamableEventSource {
 
         KafkaMessageStream stream = new KafkaMessageStream(buffer, () -> fetcherRegistration.cancel());
         streamHolder[0] = stream;
+
+        EventCriteria criteria = condition.criteria();
+        if (criteria != null && criteria.hasCriteria()) {
+            logger.debug("Applying client-side EventCriteria filter: {}", criteria);
+            return stream.filter(entry -> {
+                EventMessage msg = entry.message();
+                Set<Tag> tags = Tag.fromContext(entry).orElse(Collections.emptySet());
+                return criteria.matches(msg.type().qualifiedName(), tags);
+            });
+        }
         return stream;
     }
 

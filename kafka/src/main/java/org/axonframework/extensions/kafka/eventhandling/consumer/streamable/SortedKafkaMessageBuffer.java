@@ -256,6 +256,8 @@ public class SortedKafkaMessageBuffer<E extends Comparable<?> & KafkaRecordMetaD
         reentrantLock.lock();
         try {
             this.delegate.clear();
+            this.count = 0;
+            this.notFull.signalAll();
         } finally {
             reentrantLock.unlock();
         }
