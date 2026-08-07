@@ -20,7 +20,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.axonframework.extensions.kafka</groupId>
     <artifactId>axon-kafka-parent</artifactId>
-    <version>5.2.3</version>
+    <version>5.3.0</version>
 
     <packaging>pom</packaging>
 
@@ -46,7 +46,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Main -->
-        <axon.version>5.2.3</axon.version>
+        <axon.version>5.3.0</axon.version>
         <kafka.version>3.9.0</kafka.version>
         <java.version>21</java.version>
 
